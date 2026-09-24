@@ -1,0 +1,7 @@
+id,value,label,note
+1,,,
+2,0,Zero,ok
+3,-1,Negative,ok
+4,1e10,Huge,scientific notation
+5,NaN,Text NaN,literal text nan
+6,   ,Whitespace only,

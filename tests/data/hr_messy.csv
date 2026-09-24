@@ -1,0 +1,7 @@
+employee_id,employee_name,annual_ctc,joining_date,phone_no,status
+E001, Alice Brown ,55000,2021-06-01,+1 (555) 123-4567,Active
+E002,bob green,€62000,01/12/2021,555-234-5678,active
+E003,Carol White,58000,2021-06-15,5551234567890000,ACTIVE
+E004,David Black,,2021-07-01,555.345.6789,Inactive
+E005,Eve Grey,60000,2021-07-01,555 456 7890,Active
+E006,Eve Grey,60000,2021-07-01,555 456 7890,Active

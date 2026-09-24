@@ -1,0 +1,6 @@
+sku,product_name,quantity,unit_price,warehouse
+SKU-1, Widget A ,100,9.99,WH1
+SKU-2,Widget B,-5,19.99,WH2
+SKU-3,widget a,100,9.99,wh1
+SKU-4,Widget C,0,,WH3
+SKU-5,Widget D,999999,5.50,WH1

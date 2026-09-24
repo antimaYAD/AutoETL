@@ -1,0 +1,6 @@
+transaction_id,account_name,amount,currency,transaction_date
+T001,Acme Corp,"$10,000.00",USD,2024-02-01
+T002,Acme Corp,10000,USD,2024-02-01
+T003,Globex Inc,£2500,GBP,02/03/2024
+T004,Initech,not-a-number,USD,2024-02-05
+T005,Umbrella LLC,-500,USD,2024-02-06

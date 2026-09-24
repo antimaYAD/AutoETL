@@ -1,0 +1,6 @@
+order_id,customer_email,product,qty,price,status
+O1,alice@example.com,Shoes,2,49.99,Delivered
+O2,ALICE@EXAMPLE.COM ,Shoes,2,49.99,delivered
+O3,bob@example,Bag,1,89.99,Pending
+O4,carol@example.com,Hat,-1,19.99,Cancelled
+O5,dave@example.com,Belt,1,,Delivered
