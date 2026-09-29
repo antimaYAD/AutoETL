@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pandas as pd
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
@@ -35,6 +36,29 @@ def list_datasets(db: Session = Depends(get_db), current_user: User = Depends(ge
 @router.get("/{dataset_id}", response_model=DatasetRead)
 def get_dataset(dataset_id: int, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     return get_owned_dataset(db, dataset_id, current_user)
+
+
+@router.get("/{dataset_id}/sample")
+def sample_dataset(
+    dataset_id: int,
+    version_id: int | None = None,
+    limit: int = 20,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    dataset = get_owned_dataset(db, dataset_id, current_user)
+    version = get_owned_version(dataset, version_id)
+    df = ingestion_service.load_version_dataframe(version)
+    # Cast to object dtype first so None can replace NaN/NaT (float columns
+    # would otherwise coerce None back to NaN and break JSON serialization).
+    sample = df.head(min(max(limit, 1), 100)).astype(object)
+    sample = sample.where(pd.notna(sample), None)
+    return {
+        "dataset_version_id": version.id,
+        "columns": list(sample.columns),
+        "rows": sample.to_dict(orient="records"),
+        "total_rows": len(df),
+    }
 
 
 @router.get("/{dataset_id}/versions/{version_id}/download")

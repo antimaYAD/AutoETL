@@ -3,6 +3,7 @@ import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { AuthProvider } from "./auth/AuthContext";
 import Layout from "./components/Layout";
 import ProtectedRoute from "./components/ProtectedRoute";
+import AnalyticsPage from "./pages/AnalyticsPage";
 import DashboardPage from "./pages/DashboardPage";
 import DatasetPage from "./pages/DatasetPage";
 import LoginPage from "./pages/LoginPage";
@@ -28,6 +29,7 @@ export default function App() {
             <Route path="/datasets/:id" element={<DatasetPage />} />
             <Route path="/datasets/:id/transform" element={<TransformPage />} />
             <Route path="/datasets/:id/results/:versionId" element={<ResultsPage />} />
+            <Route path="/datasets/:id/analytics" element={<AnalyticsPage />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

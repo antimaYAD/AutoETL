@@ -1,12 +1,24 @@
-import { useLocation, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useLocation, useParams } from "react-router-dom";
 
 import { API_BASE_URL, tokenStore } from "../api/client";
+import { datasetsApi, type DatasetSample } from "../api/endpoints";
 import type { TransformResult } from "../api/types";
 
 export default function ResultsPage() {
   const { id, versionId } = useParams<{ id: string; versionId: string }>();
   const location = useLocation();
   const result = (location.state as { result?: TransformResult } | null)?.result;
+
+  const [sample, setSample] = useState<DatasetSample | null>(null);
+  const [sampleError, setSampleError] = useState("");
+
+  useEffect(() => {
+    datasetsApi
+      .sample(Number(id), versionId ? Number(versionId) : undefined)
+      .then((res) => setSample(res.data))
+      .catch(() => setSampleError("Could not load a preview of the transformed data."));
+  }, [id, versionId]);
 
   async function handleDownload() {
     const res = await fetch(
@@ -67,10 +79,52 @@ export default function ResultsPage() {
         </div>
       )}
 
+      <div className="card" style={{ marginBottom: 24 }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+          <h2 className="section-title" style={{ marginBottom: 4 }}>
+            Data preview
+          </h2>
+          {sample && (
+            <span style={{ fontSize: 13, color: "var(--text-muted)" }}>
+              showing first {sample.rows.length} of {sample.total_rows.toLocaleString()} rows
+            </span>
+          )}
+        </div>
+        {sampleError && <div className="error-banner">{sampleError}</div>}
+        {!sample && !sampleError && (
+          <p style={{ color: "var(--text-muted)", fontSize: 14 }}>Loading preview…</p>
+        )}
+        {sample && (
+          <div style={{ overflowX: "auto" }}>
+            <table className="table">
+              <thead>
+                <tr>
+                  {sample.columns.map((c) => (
+                    <th key={c}>{c}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {sample.rows.map((row, ri) => (
+                  <tr key={ri}>
+                    {sample.columns.map((c) => (
+                      <td key={c}>{row[c] === null || row[c] === undefined ? "∅" : String(row[c])}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
       <div style={{ display: "flex", gap: 10 }}>
         <button className="btn btn-primary" onClick={handleDownload}>
           Download Clean Data
         </button>
+        <Link className="btn" to={`/datasets/${id}/analytics?version=${versionId}`}>
+          Open Analytics Dashboard
+        </Link>
       </div>
     </>
   );

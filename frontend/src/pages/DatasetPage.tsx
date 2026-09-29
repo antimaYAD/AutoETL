@@ -3,6 +3,7 @@ import { Link, useParams } from "react-router-dom";
 
 import { errorMessage } from "../api/client";
 import { analysisApi, datasetsApi } from "../api/endpoints";
+import { recommendTransformations } from "../api/recommendations";
 import type { Dataset, DatasetIssues, DatasetProfile } from "../api/types";
 
 const SEVERITY_BADGE: Record<string, string> = {
@@ -56,6 +57,16 @@ export default function DatasetPage() {
 
   if (!dataset) return <div className="loading">{error || "Loading…"}</div>;
 
+  const recommendations = issues ? recommendTransformations(issues.issues) : [];
+  const uniqueOps = [...new Map(recommendations.map((r) => [r.operation, r])).values()];
+  const transformQuery = new URLSearchParams({
+    ...(versionId ? { version: String(versionId) } : {}),
+    ...(uniqueOps.length > 0
+      ? { ops: JSON.stringify(uniqueOps.map((r) => ({ op: r.operation, col: r.column }))) }
+      : {}),
+  }).toString();
+  const transformUrl = `/datasets/${datasetId}/transform${transformQuery ? `?${transformQuery}` : ""}`;
+
   return (
     <>
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
@@ -79,7 +90,10 @@ export default function DatasetPage() {
               </option>
             ))}
           </select>
-          <Link className="btn btn-primary" to={`/datasets/${datasetId}/transform${versionId ? `?version=${versionId}` : ""}`}>
+          <Link className="btn" to={`/datasets/${datasetId}/analytics${versionId ? `?version=${versionId}` : ""}`}>
+            Analytics
+          </Link>
+          <Link className="btn btn-primary" to={transformUrl}>
             Review Transformations
           </Link>
         </div>
@@ -164,7 +178,39 @@ export default function DatasetPage() {
         ) : issues.issues.length === 0 ? (
           <p style={{ color: "var(--success)", fontSize: 14 }}>No issues detected.</p>
         ) : (
-          <table className="table">
+          <>
+            {uniqueOps.length > 0 && (
+              <div
+                style={{
+                  background: "#eef2ff",
+                  border: "1px solid #c7d2fe",
+                  borderRadius: "var(--radius-sm)",
+                  padding: "12px 16px",
+                  marginBottom: 16,
+                }}
+              >
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 10 }}>
+                  Recommended transformations
+                </div>
+                <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                  {uniqueOps.map((r) => (
+                    <span
+                      key={r.operation}
+                      className="badge badge-status"
+                      style={{ fontSize: 13, padding: "5px 12px" }}
+                    >
+                      {r.label}
+                    </span>
+                  ))}
+                </div>
+                <div style={{ marginTop: 12 }}>
+                  <Link className="btn btn-primary" to={transformUrl}>
+                    Review Transformations
+                  </Link>
+                </div>
+              </div>
+            )}
+            <table className="table">
             <thead>
               <tr>
                 <th>Issue</th>
@@ -191,6 +237,7 @@ export default function DatasetPage() {
               ))}
             </tbody>
           </table>
+          </>
         )}
       </div>
     </>

@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import auth, datasets, profiling, transformations
+from app.api import analytics, auth, datasets, profiling, transformations
 from app.config import get_settings
 
 settings = get_settings()
@@ -20,6 +20,7 @@ app.include_router(auth.router, prefix=settings.api_v1_prefix)
 app.include_router(datasets.router, prefix=settings.api_v1_prefix)
 app.include_router(profiling.router, prefix=settings.api_v1_prefix)
 app.include_router(transformations.router, prefix=settings.api_v1_prefix)
+app.include_router(analytics.router, prefix=settings.api_v1_prefix)
 
 
 @app.get("/health", tags=["health"])
