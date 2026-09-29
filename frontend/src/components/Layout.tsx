@@ -15,22 +15,7 @@ export default function Layout() {
     <>
       <header className="navbar">
         <NavLink to="/" className="navbar-brand">
-          <span
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: 8,
-              background: "var(--gradient)",
-              display: "inline-flex",
-              alignItems: "center",
-              justifyContent: "center",
-              color: "#fff",
-              fontSize: 15,
-              WebkitTextFillColor: "#fff",
-            }}
-          >
-            ⛁
-          </span>
+          <img src="/logo-icon.png" alt="AutoETL" className="navbar-logo" />
           AutoETL
         </NavLink>
         <nav className="navbar-nav">

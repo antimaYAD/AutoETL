@@ -29,7 +29,7 @@ export default function LoginPage() {
   return (
     <div className="auth-shell">
       <div className="auth-card">
-        <div className="auth-logo">⛁</div>
+        <img src="/logo.jpg" alt="AETL — Auto ETL & Analysis" className="auth-logo" />
         <h1 className="page-title" style={{ textAlign: "center" }}>
           Welcome back
         </h1>

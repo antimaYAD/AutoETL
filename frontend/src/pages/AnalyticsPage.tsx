@@ -5,6 +5,7 @@ import { toPng } from "html-to-image";
 import { errorMessage } from "../api/client";
 import { datasetsApi, type AnalyticsResult, type ChartSpec } from "../api/endpoints";
 import { ChartBody, formatValue } from "../components/AnalyticsCharts";
+import { captureBlocks, exportDocx, exportPdf } from "../utils/reportExport";
 
 const WIDE_KINDS = new Set(["line", "forecast", "pareto"]);
 
@@ -48,10 +49,10 @@ function chartToCsv(spec: ChartSpec): string {
   return [keys.join(","), ...rows.map((r) => keys.map((k) => esc(r[k])).join(","))].join("\n");
 }
 
-function ChartCard({ spec }: { spec: ChartSpec }) {
+function ChartCard({ spec, index }: { spec: ChartSpec; index: number }) {
   const ref = useRef<HTMLDivElement>(null);
   return (
-    <div className="card" ref={ref} style={WIDE_KINDS.has(spec.kind) ? { gridColumn: "1 / -1" } : undefined}>
+    <div className="card" ref={ref} data-export-block={`chart-${index}`} style={WIDE_KINDS.has(spec.kind) ? { gridColumn: "1 / -1" } : undefined}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 12, marginBottom: 6 }}>
         <div>
           <h3 style={{ margin: 0, fontSize: 16, fontWeight: 600 }}>{spec.title}</h3>
@@ -92,7 +93,23 @@ export default function AnalyticsPage() {
 
   const [data, setData] = useState<AnalyticsResult | null>(null);
   const [error, setError] = useState("");
+  const [busy, setBusy] = useState<"" | "pdf" | "docx">("");
   const dashRef = useRef<HTMLDivElement>(null);
+
+  async function handleReport(kind: "pdf" | "docx") {
+    if (!dashRef.current || !data) return;
+    setBusy(kind);
+    try {
+      const blocks = await captureBlocks(dashRef.current);
+      const base = `analytics_report_v${versionId ?? "latest"}`;
+      if (kind === "pdf") await exportPdf(data, blocks, `${base}.pdf`);
+      else await exportDocx(data, blocks, `${base}.docx`);
+    } catch {
+      alert("Report export failed");
+    } finally {
+      setBusy("");
+    }
+  }
 
   useEffect(() => {
     datasetsApi
@@ -127,8 +144,11 @@ export default function AnalyticsPage() {
         <div style={{ display: "flex", gap: 8 }}>
           <button className="btn" onClick={() => downloadText(kpiCsv, "kpis.csv", "text/csv")}>Export KPIs (CSV)</button>
           <button className="btn" onClick={() => downloadText(JSON.stringify(data, null, 2), "analytics.json", "application/json")}>Export JSON</button>
-          <button className="btn btn-primary" onClick={() => exportPng(dashRef.current, `dashboard_v${versionId ?? "latest"}.png`)}>
-            Download Dashboard
+          <button className="btn btn-primary" disabled={busy !== ""} onClick={() => handleReport("pdf")}>
+            {busy === "pdf" ? "Building PDF…" : "Download Report (PDF)"}
+          </button>
+          <button className="btn btn-primary" disabled={busy !== ""} onClick={() => handleReport("docx")}>
+            {busy === "docx" ? "Building Word…" : "Download Report (Word)"}
           </button>
         </div>
       </div>
@@ -145,14 +165,14 @@ export default function AnalyticsPage() {
         </div>
 
         {insights.headline && (
-          <div className="card" style={{ marginBottom: 20, borderLeft: "4px solid #6366f1" }}>
+          <div className="card" data-export-block="summary" style={{ marginBottom: 20, borderLeft: "4px solid #6366f1" }}>
             <div style={{ fontSize: 12, fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-muted)", marginBottom: 4 }}>Summary</div>
             <div style={{ fontSize: 15 }}>{insights.headline}</div>
           </div>
         )}
 
         {data.preparation.length > 0 && (
-          <div className="card" style={{ marginBottom: 20, background: "#f8fafc" }}>
+          <div className="card" data-export-block="prep" style={{ marginBottom: 20, background: "#f8fafc" }}>
             <h2 className="section-title" style={{ marginBottom: 6 }}>Data preparation</h2>
             <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 8px" }}>
               Your file was tidied in memory before analysis. The stored dataset is unchanged.
@@ -166,7 +186,7 @@ export default function AnalyticsPage() {
         )}
 
         {groups.map((g) => (
-          <div key={g.name} style={{ marginBottom: 20 }}>
+          <div key={g.name} data-export-block={`kpis-${slug(g.name)}`} style={{ marginBottom: 20 }}>
             <h2 className="section-title" style={{ marginBottom: 10 }}>{g.name}</h2>
             <div className="stat-grid">
               {g.items.map((k) => (
@@ -182,7 +202,7 @@ export default function AnalyticsPage() {
           </div>
         ))}
 
-        <div className="card" style={{ marginBottom: 24 }}>
+        <div className="card" data-export-block="insights" style={{ marginBottom: 24 }}>
           <h2 className="section-title">Insights</h2>
           {sections.map((s) =>
             s.items.length === 0 ? null : (
@@ -200,12 +220,12 @@ export default function AnalyticsPage() {
 
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(460px, 1fr))", gap: 20, marginBottom: 24 }}>
           {data.charts.map((spec, i) => (
-            <ChartCard key={i} spec={spec} />
+            <ChartCard key={i} spec={spec} index={i} />
           ))}
         </div>
 
         {data.stats.length > 0 && (
-          <div className="card" style={{ marginBottom: 24 }}>
+          <div className="card" data-export-block="stats" style={{ marginBottom: 24 }}>
             <h2 className="section-title">Numeric column statistics</h2>
             <div style={{ overflowX: "auto" }}>
               <table className="table">
@@ -236,7 +256,7 @@ export default function AnalyticsPage() {
         )}
 
         {data.anomalies.length > 0 && (
-          <div className="card" style={{ marginBottom: 24 }}>
+          <div className="card" data-export-block="anomalies" style={{ marginBottom: 24 }}>
             <h2 className="section-title">Outliers & anomalies</h2>
             <p style={{ fontSize: 12, color: "var(--text-muted)", margin: "0 0 8px" }}>
               Mild = outside 1.5 × IQR; extreme = outside 3 × IQR. Skewed business data often has many legitimate large values, so review before removing anything.
@@ -271,7 +291,7 @@ export default function AnalyticsPage() {
         )}
 
         {data.categories.length > 0 && (
-          <div className="card" style={{ marginBottom: 24 }}>
+          <div className="card" data-export-block="categories" style={{ marginBottom: 24 }}>
             <h2 className="section-title">Category breakdown</h2>
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: 20 }}>
               {data.categories.map((c) => (

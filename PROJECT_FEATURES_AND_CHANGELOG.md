@@ -6,7 +6,7 @@ A single reference for everything built in this project, from the first commit t
 - **Stack:** FastAPI, SQLAlchemy 2, PostgreSQL, Alembic, pandas, React 19 + Vite + TypeScript, Recharts.
 - **Tests:** 62 backend tests passing (`venv\Scripts\python.exe -m pytest`).
 - **Repository:** https://github.com/antimaYAD/AutoETL (branch `main`).
-- **Commit status:** only the initial Phase 1 commit is pushed. Everything from section 4 onward (the `/sample` endpoint, transformation-page fixes and the analytics dashboard) is **uncommitted**. Commit it when ready.
+- **Commit status:** pushed through `ddc905c` (analytics dashboard, data preview, transformation fixes). The multi-page PDF/Word report export (change 30 below) is newer and **not yet committed**.
 
 ---
 
@@ -112,8 +112,9 @@ Based on `data_analysis_kpi_prediction_framework.md`. Everything is deterministi
 - Also included: a numeric statistics table, a category breakdown, and a "blank revenue can be derived" finding.
 
 **Exports:**
+- **Report (PDF):** multi-page A4. Each section and chart is placed in reading order, never split across a page, with a title block and "Page X of Y" footers.
+- **Report (Word, .docx):** an editable document with native headings, bullet lists and tables (key metrics, statistics, outliers, categories) plus every chart embedded as an image, two charts per page.
 - Per chart: PNG and CSV.
-- Whole dashboard: PNG.
 - KPIs: CSV.
 - Full analysis: JSON.
 
@@ -192,13 +193,19 @@ Security note: `.env.example` was overwritten twice with real-looking cloud cred
     - Added exports: per-chart PNG and CSV, KPI CSV, JSON.
 29. **Verification.** All 19 charts from the real file were server-rendered and checked for axes, grid and titles. 62 backend tests pass, including report-style input, partial periods and axis-label contracts. Two bugs were caught and fixed by the tests: the small-dataset scatter crash and IDs being over-detected.
 
+30. **Multi-page report export.** Replaced the single whole-dashboard PNG with **Download Report (PDF)** and **Download Report (Word)**.
+    - Built in the browser (`frontend/src/utils/reportExport.ts`) using `jspdf` and `docx`, with no backend change.
+    - Each dashboard section is captured as a block and paginated, so nothing is cut off.
+    - Verified on the real Sales Register analysis: the PDF is valid and 13 pages long; the Word file has 19 chart images, 8 tables and editable text.
+
 ---
 
 ## 5. Known limitations and next steps
 
 - **Async jobs:** everything runs synchronously; Celery and Redis are deferred.
 - **Not yet built:** Docker deployment, S3/MinIO storage, multi-tenant RBAC, a transformation planner with an approval workflow, dedicated job/audit tables, AI/LLM semantic layer.
-- **Analytics gaps:** no ML models (classification, clustering, ARIMA/Prophet); domain KPI packs beyond sales/finance-style measures (HR attrition, inventory turnover, marketing ROAS); funnel and cohort charts; PDF/HTML report export.
+- **Analytics gaps:** no ML models (classification, clustering, ARIMA/Prophet); domain KPI packs beyond sales/finance-style measures (HR attrition, inventory turnover, marketing ROAS); funnel and cohort charts; HTML report export.
+- **Report export:** the PDF is made of chart and section images (not selectable text); use the Word report when you need editable text. Very large dashboards take a few seconds to render.
 - **Forecast:** a simple linear trend, so treat it as directional.
 - **Maintenance:**
   - Passlib logs a harmless `bcrypt.__about__` warning.
