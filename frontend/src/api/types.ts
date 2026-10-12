@@ -13,6 +13,7 @@ export interface DatasetVersion {
   row_count: number | null;
   column_count: number | null;
   status: string;
+  source_sheets: string[] | null;
   created_at: string;
 }
 

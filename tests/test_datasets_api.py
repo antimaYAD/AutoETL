@@ -1,6 +1,17 @@
+import io
 from pathlib import Path
 
+import pandas as pd
+
 TEST_DATA_DIR = Path(__file__).parent / "data"
+
+
+def _make_xlsx(sheets: dict[str, pd.DataFrame]) -> bytes:
+    buf = io.BytesIO()
+    with pd.ExcelWriter(buf, engine="openpyxl") as writer:
+        for name, df in sheets.items():
+            df.to_excel(writer, sheet_name=name, index=False)
+    return buf.getvalue()
 
 
 def _upload(client, headers, filename="sales_messy.csv"):
@@ -41,6 +52,96 @@ def test_upload_rejects_empty_file(client, auth_headers):
         "/api/v1/datasets/upload",
         headers=auth_headers,
         files={"file": ("empty.csv", b"", "text/csv")},
+    )
+    assert response.status_code == 400
+
+
+def test_upload_multisheet_excel_merges_sheets(client, auth_headers):
+    content = _make_xlsx(
+        {
+            "Sales": pd.DataFrame({"order": [1, 2], "amount": [10.0, 20.0]}),
+            "Costs": pd.DataFrame({"order": [3], "cost": [5.0]}),
+        }
+    )
+    response = client.post(
+        "/api/v1/datasets/upload",
+        headers=auth_headers,
+        files={"file": ("book.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+    )
+    assert response.status_code == 201
+    body = response.json()
+    version = body["versions"][0]
+    # 2 rows + 1 row merged; union of columns plus source_sheet
+    assert version["row_count"] == 3
+    assert version["column_count"] == 4
+    assert version["source_sheets"] == ["Sales", "Costs"]
+
+    sample = client.get(f"/api/v1/datasets/{body['id']}/sample", headers=auth_headers)
+    assert sample.status_code == 200
+    data = sample.json()
+    assert "source_sheet" in data["columns"]
+    assert {r["source_sheet"] for r in data["rows"]} == {"Sales", "Costs"}
+
+
+def test_upload_single_sheet_excel_has_no_source_column(client, auth_headers):
+    content = _make_xlsx({"Only": pd.DataFrame({"a": [1, 2], "b": ["x", "y"]})})
+    response = client.post(
+        "/api/v1/datasets/upload",
+        headers=auth_headers,
+        files={"file": ("single.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+    )
+    assert response.status_code == 201
+    body = response.json()
+    version = body["versions"][0]
+    assert version["row_count"] == 2
+    assert version["column_count"] == 2
+    assert version["source_sheets"] == ["Only"]
+
+    sample = client.get(f"/api/v1/datasets/{body['id']}/sample", headers=auth_headers)
+    assert "source_sheet" not in sample.json()["columns"]
+
+
+def test_upload_report_style_excel_promotes_headers(client, auth_headers):
+    """Workbook with a title row above the real header row must not surface
+    'Unnamed: N' columns in the profile/sample."""
+    from openpyxl import Workbook
+
+    buf = io.BytesIO()
+    wb = Workbook()
+    ws = wb.active
+    ws.append(["For Period 1-Apr-26 To 4-Sep-26"])
+    ws.append(["Date", "Customer", "Amount"])
+    ws.append(["2026-04-01", "A Corp", 10.0])
+    ws.append(["2026-04-02", "B Ltd", 20.0])
+    wb.save(buf)
+
+    response = client.post(
+        "/api/v1/datasets/upload",
+        headers=auth_headers,
+        files={"file": ("report.xlsx", buf.getvalue(), "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
+    )
+    assert response.status_code == 201
+    body = response.json()
+    version = body["versions"][0]
+    assert version["row_count"] == 2
+    assert version["column_count"] == 3
+
+    sample = client.get(f"/api/v1/datasets/{body['id']}/sample", headers=auth_headers)
+    assert sample.status_code == 200
+    assert sample.json()["columns"] == ["Date", "Customer", "Amount"]
+
+    profile = client.post(f"/api/v1/datasets/{body['id']}/profile", headers=auth_headers)
+    assert profile.status_code == 200
+    profiled_cols = [c["column"] for c in profile.json()["columns"]]
+    assert profiled_cols == ["Date", "Customer", "Amount"]
+
+
+def test_upload_empty_workbook_rejected(client, auth_headers):
+    content = _make_xlsx({"Empty": pd.DataFrame()})
+    response = client.post(
+        "/api/v1/datasets/upload",
+        headers=auth_headers,
+        files={"file": ("empty.xlsx", content, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet")},
     )
     assert response.status_code == 400
 

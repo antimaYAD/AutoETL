@@ -7,7 +7,7 @@
 - Run tests: `venv\Scripts\python.exe -m pytest`
 - Create a migration: `venv\Scripts\python.exe -m alembic revision --autogenerate -m "message"`
 - Apply migrations: `venv\Scripts\python.exe -m alembic upgrade head`
-- Frontend (React + Vite + TS, lives in `frontend/`): `cd frontend && npm install && npx vite` — dev server on port 5173, talks to the API via `VITE_API_URL` in `frontend/.env` (default http://127.0.0.1:8010).
+- Frontend (React + Vite + TS, lives in `frontend/`): `cd frontend && npm install && npx vite` — dev server on port 3000 (set in `vite.config.ts`), talks to the API via `VITE_API_URL` in `frontend/.env` (default http://127.0.0.1:8000).
 
 ## Phase 1 scope (current)
 

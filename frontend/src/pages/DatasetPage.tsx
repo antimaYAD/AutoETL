@@ -87,6 +87,7 @@ export default function DatasetPage() {
             {dataset.versions.map((v) => (
               <option key={v.id} value={v.id}>
                 v{v.version_number} — {v.label}
+                {v.source_sheets && v.source_sheets.length > 1 ? ` · ${v.source_sheets.length} sheets merged` : ""}
               </option>
             ))}
           </select>

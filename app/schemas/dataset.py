@@ -12,6 +12,7 @@ class DatasetVersionRead(BaseModel):
     row_count: int | None
     column_count: int | None
     status: str
+    source_sheets: list[str] | None = None
     created_at: dt.datetime
 
 

@@ -198,6 +198,18 @@ Security note: `.env.example` was overwritten twice with real-looking cloud cred
     - Each dashboard section is captured as a block and paginated, so nothing is cut off.
     - Verified on the real Sales Register analysis: the PDF is valid and 13 pages long; the Word file has 19 chart images, 8 tables and editable text.
 
+31. **Multi-sheet Excel workbooks.** Previously `pd.read_excel` read only sheet 0 — extra sheets were silently dropped.
+    - Upload now reads **every sheet** (`sheet_name=None`), drops empty sheets, and merges all sheets into one table (union of columns; missing columns become null).
+    - A `source_sheet` column records which sheet each row came from — it also shows up as a dimension in analytics, so you can break metrics down by sheet.
+    - The merged table is stored as a plain CSV (same format as transformed versions), so all downstream code is unchanged. The version selector shows "N sheets merged".
+    - `DatasetVersion.source_sheets` records the contributing sheet names (migration `0002`). Fully empty workbooks are rejected with a clear error.
+
+32. **Shared header tidy-up for every reader.** Report-style files (a title row above the real header) previously showed `Unnamed: N` columns in the profile, sample, issues and transformation pages — only analytics fixed them in memory.
+    - The structural tidy (title-row header promotion + repeated-header-row removal + empty-row drop) moved to `app/services/prep_service.py` (`prepare_frame`).
+    - `load_version_dataframe` now returns the tidied frame, so profiling, issue detection, preview, transformations, the sample endpoint and analytics all see real column names — including datasets uploaded before this change.
+    - Excel sheets are tidied individually before the multi-sheet merge, so one messy sheet can't poison the merged columns.
+    - Value-level conversions (text→number, Excel serial dates, derived names like "Total Sale Amount") stay inside `analytics_service.prepare_dataframe`, which calls `prepare_frame` first — issue detection still sees raw values so it can flag them.
+
 ---
 
 ## 5. Known limitations and next steps
